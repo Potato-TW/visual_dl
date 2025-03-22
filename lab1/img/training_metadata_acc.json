@@ -1,0 +1,1 @@
+{"epoch": 49, "train_loss": 0.15285948429394652, "valid_loss": 0.5523528978228569, "metric_value": 0.8866666555404663, "learning_rate": 4.1726849114642154e-09, "model_architecture": "resnext101_32x8d.fb_swsl_ig1b_ft_in1k"}
