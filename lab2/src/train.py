@@ -84,7 +84,7 @@ def train(train_data_loader, val_data_loader):
     import torch.optim as optim
     from torch.optim.lr_scheduler import CosineAnnealingLR
     
-    epochs = 2
+    epochs = 1
     
     # 優化器改進
     optimizer = optim.AdamW(
@@ -98,7 +98,7 @@ def train(train_data_loader, val_data_loader):
     # 學習率調度器升級
     lr_scheduler = CosineAnnealingLR(
         optimizer,
-        T_max=epochs*0.5,        # 週期設為總epoch數的60%
+        T_max=epochs*1,        # 週期設為總epoch數的60%
         eta_min=1e-6             # 最小學習率下限
     )
 

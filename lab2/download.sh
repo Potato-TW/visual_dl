@@ -30,3 +30,10 @@ mv nycu-hw2-data/ dataset/
 
 
 python3 src/train.py
+
+function ConnectButton(){
+    console.log("Connect pushed"); 
+    document.querySelector("#top-toolbar > colab-connect-button").shadowRoot.querySelector("#connect").click() 
+}
+setInterval(ConnectButton,60000);
+66731
