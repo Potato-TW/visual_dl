@@ -2,6 +2,7 @@ import torch
 import torchvision
 from torchvision.models.detection import FasterRCNN
 from torchvision.models.detection.rpn import AnchorGenerator
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
 
 import torchvision.transforms as T
 
@@ -30,35 +31,143 @@ def build_model(num_classes=11):
     )
     
     return model
+    
+    # # 使用预训练的ResNet50+FPN backbone
+    # backbone = resnet_fpn_backbone(
+    #     backbone_name='resnet50',
+    #     weights=torchvision.models.ResNet50_Weights.DEFAULT,
+    #     trainable_layers=3  # 只微调最后3個block
+    # )
+    
+    # # 使用官方预设的anchor生成器（针对FPN优化）
+    # anchor_sizes = ((32,), (64,), (128,), (256,), (512,))  # 各特徵層的基礎尺寸
+    # aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
+    
+    # return FasterRCNN(
+    #     backbone,
+    #     num_classes=num_classes,
+    #     rpn_anchor_generator=AnchorGenerator(anchor_sizes, aspect_ratios),
+    #     box_score_thresh=0.8,
+    #     box_batch_size_per_image=128  # 增加ROI采样数量以提升精度
+    # )
 
-
+def plot_img(data, data_label, title, y_label, save_path, y_lim=None):
+    plt.plot(data, label=data_label)
+    plt.title(title)
+    plt.xlabel('epoch')
+    plt.ylabel(y_label)
+    if y_lim is not None:
+        plt.ylim(y_lim[0], y_lim[1])
+    plt.legend()
+    plt.savefig(save_path)
+    plt.close()
+    
 # 訓練流程
-def train(data_loader):
-    model = build_model()
+def train(train_data_loader, val_data_loader):
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = build_model().to(device)
     
-    optimizer = torch.optim.SGD(
+    # optimizer = torch.optim.SGD(
+    #     model.parameters(),
+    #     lr=0.005,
+    #     momentum=0.9,
+    #     weight_decay=0.0005
+    # )
+    
+    # optimizer = optim.Adam(
+    #     model.parameters(),
+    #     lr=0.001,
+    #     weight_decay=0.0005
+    # )
+    # lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
+    
+    import torch.optim as optim
+    from torch.optim.lr_scheduler import CosineAnnealingLR
+    
+    epochs = 2
+    
+    # 優化器改進
+    optimizer = optim.AdamW(
         model.parameters(),
-        lr=0.005,
-        momentum=0.9,
-        weight_decay=0.0005
+        lr=0.001,                # 初始學習率保持不變
+        weight_decay=0.0001,     # 降低權重衰減係數(原0.0005→0.0001)
+        betas=(0.9, 0.999),      # 保持默認動量參數
+        eps=1e-08
     )
+
+    # 學習率調度器升級
+    lr_scheduler = CosineAnnealingLR(
+        optimizer,
+        T_max=epochs*0.5,        # 週期設為總epoch數的60%
+        eta_min=1e-6             # 最小學習率下限
+    )
+
+    # 添加梯度裁剪(在訓練循環中)
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
     
-    epochs = 10
+    best_val_loss = float('inf')
     
+    train_loss_list = []
+    val_loss_list = []
     for epoch in tqdm(range(epochs), desc="Epochs"):
-        bar = tqdm(data_loader, desc="Training", leave=False)
-        for images, targets in data_loader:
+        model.train()
+        
+        bar = tqdm(train_data_loader, desc="Training", leave=False)
+        for images, targets in train_data_loader:
+            images = [img.to(device) for img in images]  # 列表推導式逐個轉移
+            targets = [{k: v.to(device) for k,v in t.items()} for t in targets]  # 雙層推導式
+            
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
+            train_loss_list.append(losses.detach().cpu().item())
             
             optimizer.zero_grad()
             losses.backward()
             optimizer.step()
+            lr_scheduler.step()
             
-            bar.set_postfix(loss=losses.item())
+            bar.set_postfix(loss=losses.detach().cpu().item())
             bar.update()
             
         bar.close()
+        
+        model.eval()
+        
+        val_bar = tqdm(val_data_loader, desc="Validation", leave=False)
+        with torch.no_grad():
+            for images, targets in val_data_loader:
+                images = [img.to(device) for img in images]
+                targets = [{k: v.to(device) for k,v in t.items()} for t in targets]
+                
+                val_loss_dict = model(images, targets)
+                val_losses = sum(loss for loss in val_loss_dict.values())
+                val_loss_list.append(val_losses.item())
+                
+                val_bar.set_postfix(loss=val_losses.item())
+                val_bar.update()
+        val_bar.close()
+        
+        # 保存模型
+        if val_losses < best_val_loss:
+            best_val_loss = val_losses
+            # print(f"Saving model with loss: {best_val_loss.item()}")
+            torch.save(model.state_dict(), f"ckpt/model_epoch_{epoch}.pth")
+        
+        plot_img(
+            train_loss_list,
+            'Train Loss',
+            'Training Loss',
+            'Loss',
+            f'img/train_loss.png'
+        )
+        plot_img(
+            val_loss_list,
+            'Val Loss',
+            'Val Loss',
+            'Loss',
+            f'img/val_loss.png'
+        )
+            
 
 def custom_collate(batch):
     """處理可變長度目標檢測數據"""
@@ -78,6 +187,10 @@ def custom_collate(batch):
     return images, targets
 
 if __name__ == "__main__":
+    import os
+    os.makedirs('ckpt/', exist_ok=True)
+    os.makedirs('img/', exist_ok=True)
+    
     dataset = DigitDataset(
         root='dataset/train',
         annotation_path='dataset/train.json',
@@ -96,18 +209,24 @@ if __name__ == "__main__":
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     loader_param = {
-        'batch_size': 16,
+        'batch_size': 8,
         'num_workers': 12,
         'persistent_workers': True,
-        # 'pin_memory': 'cuda' in device,
-        # 'pin_memory_device': device if 'cuda' in device else '',
+        'pin_memory': 'cuda' in device,
+        'pin_memory_device': device if 'cuda' in device else '',
         'collate_fn': custom_collate,
     }
 
-    data_loader = torch.utils.data.DataLoader(
+    train_data_loader = torch.utils.data.DataLoader(
         dataset,
         **loader_param,
         shuffle=True,
     )
     
-    train(data_loader)
+    val_data_loader = torch.utils.data.DataLoader(
+        dataset,
+        **loader_param,
+        shuffle=False,
+    )
+    
+    train(train_data_loader, val_data_loader)
