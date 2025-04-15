@@ -317,6 +317,11 @@ def task2_do(outputs, image_ids, task2, score_threshold=0.8):
         pred = int(''.join(b_sorted.astype(str)))
         # print(f'pred: {pred}')
         
+        # if not isinstance(img_id, int):
+        #     print(f'not int: {img_id}')
+        # if not isinstance(pred, int):
+        #     print(f'not int: pred {pred}')
+        # print(f'pred: {pred}')
         task2.loc[task2['image_id'] == img_id, 'pred_label'] = pred
         
     # img_id = i['image_id']
@@ -401,12 +406,12 @@ if __name__ == "__main__":
         shuffle=False,
     )
 
-    # ckpt_path = '/home/bhg/visual_dl/lab2/record/mobile_v2_50/ckpt/model_epoch_0.pth'
-    # model = load_model(ckpt_path, 11).to(device)
-    # ckpt_path = '/home/bhg/visual_dl/lab2/ckpt/model_epoch_4.pth'
+    ckpt_path = '/home/bhg/visual_dl/lab2/record/mobile_v2_50/ckpt/model_epoch_0.pth'
+    model = load_model(ckpt_path, 11).to(device)
+    # ckpt_path = '/home/bhg/visual_dl/lab2/ckpt/model_epoch_0.pth'
     # model = load_model_mobilenet_v3(ckpt_path, 11).to(device)
-    ckpt_path= '/home/bhg/visual_dl/lab2/ckpt/model_epoch_2.pth'
-    model = load_model_resnet50(ckpt_path, 11).to(device)
+    # ckpt_path= '/home/bhg/visual_dl/lab2/record/resnet50_30/model_epoch_15.pth'
+    # model = load_model_resnet50(ckpt_path, 11).to(device)
 
     
     # print(model)

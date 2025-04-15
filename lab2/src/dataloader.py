@@ -31,7 +31,7 @@ class DigitDataset(Dataset):
                 ann_dict[image_id] = []
             ann_dict[image_id].append({
                 'bbox': ann['bbox'],
-                'category_id': ann['category_id']
+                'category_id': ann['category_id'],
             })
         return ann_dict
 
@@ -69,7 +69,8 @@ class DigitDataset(Dataset):
         
         # return transform_chain(image, target)
         
-        image, target = ResizeWithBox((224, 224))(image, target)
+
+        image, target = ResizeWithBox((224, 224))(image, target)        # If need to validate transformation, comment this row
         
         # 數據預處理
         if self.transforms:
@@ -93,25 +94,39 @@ class DigitDataset(Dataset):
         orig_boxes = target['boxes'].clone()
         
         trfm_img, trfm_target = ResizeWithBox((224, 224))(image, target)
+
+        # from torchvision.ops import box_convert
+        # trfm_target = box_convert(trfm_target['boxes'], in_fmt='xyxy', out_fmt='xywh')
         
+        print(f'Trfm image size: {trfm_img.size}')
+        print(f'Trfm target: {trfm_target}')
+
         # 可視化驗證
         plt.figure(figsize=(12,6))
         
         # 原始圖像與框
         plt.subplot(121)
         or_img = T.ToTensor()(image)
+        # or_img = image
         plt.imshow(or_img.permute(1,2,0).cpu().numpy())
         for box in orig_boxes:
             x, y, w, h = box
+            # w = x2 - x1         # 寬度計算
+            # h = y2 - y1
             plt.gca().add_patch(plt.Rectangle((x,y),w,h, fill=False, edgecolor='r'))
         
         # 變換後圖像與框
         plt.subplot(122)
         trfm_img_tensor = T.ToTensor()(trfm_img)
+        # trfm_img_tensor = trfm_img
         plt.imshow(trfm_img_tensor.permute(1,2,0).cpu().numpy())
         for box in trfm_target['boxes']:
-            x, y, w, h = box
-            plt.gca().add_patch(plt.Rectangle((x,y),w,h, fill=False, edgecolor='b'))
+            # x, y, w, h = box
+            # plt.gca().add_patch(plt.Rectangle((x,y),w,h, fill=False, edgecolor='b'))
+            x1, y1, x2, y2 = box
+            w = x2 - x1         # 寬度計算
+            h = y2 - y1
+            plt.gca().add_patch(plt.Rectangle((x1,y1),w,h, fill=False, edgecolor='r'))
         
         plt.show()
 
@@ -173,3 +188,13 @@ class ResizeWithBox(object):
 #                 image = t(image)
 #         return image, target
 
+
+if __name__ == '__main__':
+    dataset = DigitDataset(
+        root='dataset/train',
+        annotation_path='dataset/train.json',
+    )
+
+    print(f'Dataset length: {len(dataset)}')
+
+    print(dataset.validate_transformation(dataset))
