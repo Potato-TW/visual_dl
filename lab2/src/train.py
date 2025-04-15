@@ -89,8 +89,6 @@ def train(train_data_loader, val_data_loader):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = build_model().to(device)
     
-
-    
     import torch.optim as optim
     from torch.optim.lr_scheduler import CosineAnnealingLR
     
@@ -130,10 +128,8 @@ def train(train_data_loader, val_data_loader):
     # 添加梯度裁剪(在訓練循環中)
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
     
-    best_val_loss = float('inf')
     
     train_loss_list = []
-    val_loss_list = []
     for epoch in tqdm(range(epochs), desc="Epochs"):
         model.train()
         
@@ -157,31 +153,31 @@ def train(train_data_loader, val_data_loader):
             
         train_loss_list.append(np.mean(train_loss_iter))
         bar.close()
+
+        from eval import test
+        val_dataset = TestDataset(
+            root='dataset/valid',
+        )
+        print(f'Valid dataset length: {len(val_dataset)}')
+
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        val_loader_param = {
+            'batch_size': 8,
+            'num_workers': 12,
+            'persistent_workers': True,
+            'pin_memory': 'cuda' in device,
+            'pin_memory_device': device if 'cuda' in device else '',
+            # 'collate_fn': custom_collate,
+        }
+
+        val_data_loader = torch.utils.data.DataLoader(
+            val_dataset,
+            **loader_param,
+            shuffle=False,
+        )
+        test(model, val_data_loader)
         
-        # model.eval()
-        
-        # val_bar = tqdm(val_data_loader, desc="Validation", leave=False)
-        # with torch.no_grad():
-        #     for images, targets in val_data_loader:
-        #         images = [img.to(device) for img in images]
-        #         targets = [{k: v.to(device) for k,v in t.items()} for t in targets]
-                
-        #         val_loss_dict = model(images, targets)
-        #         val_loss_dict = model(images)
-                
-        #         print(val_loss_dict)
-                
-        #         val_losses = sum(loss for loss in val_loss_dict.values())
-        #         val_loss_list.append(val_losses.detach().cpu().item())
-                
-        #         val_bar.set_postfix(loss=val_losses.detach().cpu().item() / len(val_data_loader))
-        #         val_bar.update()
-        # val_bar.close()
-        
-        # # 保存模型
-        # if val_losses < best_val_loss:
-        #     best_val_loss = val_losses
-        #     # print(f"Saving model with loss: {best_val_loss.item()}")
+
         torch.save(model.state_dict(), f"ckpt/model_epoch_{50+epoch}.pth")
         
     plot_img(
@@ -191,13 +187,7 @@ def train(train_data_loader, val_data_loader):
         'Loss',
         f'img/train_loss.png'
     )
-        # plot_img(
-        #     val_loss_list,
-        #     'Val Loss',
-        #     'Val Loss',
-        #     'Loss',
-        #     f'img/val_loss.png'
-        # )
+
             
 
 def custom_collate(batch):
