@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from matplotlib import pyplot as plt
 import numpy as np
+from torch.amp import autocast, GradScaler
 
 def build_model(num_classes=11):
     # # 加載預訓練backbone
@@ -38,39 +39,59 @@ def build_model(num_classes=11):
     
     # return model
     
-    # 使用预训练的ResNet50+FPN backbone
-    # backbone = resnet_fpn_backbone(
-    #     backbone_name='resnet50',
-    #     weights=torchvision.models.ResNet50_Weights.DEFAULT,
-    #     trainable_layers=3  # 只微调最后3個block
-    # )
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
-        weights=torchvision.models.detection.FasterRCNN_ResNet50_FPN_Weights.DEFAULT,
-        # num_classes=num_classes,
+    weights = torchvision.models.ResNet50_Weights.DEFAULT
+    backbone = resnet_fpn_backbone(
+        backbone_name='resnet50',
+        weights=weights,
+        trainable_layers=3  # 训练最后3个残差块
+    )
+    
+    # Anchor 配置（需匹配 FPN 输出层数）
+    anchor_sizes = ((32,), (64,), (128,), (256,), (512,))  # 对应 FPN 的5个输出层
+    aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
+    
+    anchor_generator = AnchorGenerator(
+        sizes=anchor_sizes,
+        aspect_ratios=aspect_ratios
+    )
+
+    # 构建模型
+    model = FasterRCNN(
+        backbone,
+        num_classes=num_classes,
+        rpn_anchor_generator=anchor_generator,
         box_score_thresh=0.8,
-        )
+        # 关键参数：FPN 输出的通道数（默认256）
+        box_head_detections_per_img=200  
+    )
+    return model
 
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes=num_classes)
-    # model.box_score_thresh = 0.8
 
-    # backbone = torchvision.models.resnet50(weights=ResNet50_Weights.DEFAULT)
-    # backbone = nn.Sequential(*list(backbone.children())[:-2])  # 移除最後兩層
-    # backbone.out_channels = 2048  # 對應ResNet50特徵維度
-    
-    # # 使用官方预设的anchor生成器（针对FPN优化）
-    # anchor_sizes = ((32,), (64,), (128,), (256,), (512,))  # 各特徵層的基礎尺寸
-    # aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
-    
-    # return FasterRCNN(
+    # weights = torchvision.models.MobileNet_V3_Large_Weights.DEFAULT
+    # backbone = torchvision.models.mobilenet_v3_large(weights=weights).features
+    # backbone.out_channels = 960
+
+    # # 修改anchor生成器
+    # anchor_generator = AnchorGenerator(
+    #     sizes=((32, 64, 128, 256, 512),),
+    #     aspect_ratios=((0.5, 1.0, 2.0),)
+    # )
+
+    # # 構建Faster R-CNN模型
+    # model = FasterRCNN(
     #     backbone,
     #     num_classes=num_classes,
-    #     rpn_anchor_generator=AnchorGenerator(anchor_sizes, aspect_ratios),
-    #     box_score_thresh=0.8,
-    #     box_batch_size_per_image=128  # 增加ROI采样数量以提升精度
+    #     rpn_anchor_generator=anchor_generator,
+    #     box_score_thresh=0.8  # 提高檢測閾值
     # )
-
-    return model
+    # # model = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn(
+    # #   weights=torchvision.models.detectionFasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT,
+    # #   num_classes=num_classes,
+    # #   )
+    
+    # # model.load_state_dict(torch.load('ckpt/model_epoch_49.pth', weights_only=True))
+    
+    # return model
 
 def plot_img(data, data_label, title, y_label, save_path, y_lim=None):
     from matplotlib import pyplot as plt
@@ -86,13 +107,15 @@ def plot_img(data, data_label, title, y_label, save_path, y_lim=None):
     
 # 訓練流程
 def train(train_data_loader, val_data_loader):
+    import torch
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = build_model().to(device)
     
     import torch.optim as optim
+    import torch.optim.lr_scheduler
     from torch.optim.lr_scheduler import CosineAnnealingLR
     
-    epochs = 5
+    epochs = 50
     
     # # mobile opti scheduler
 
@@ -112,23 +135,50 @@ def train(train_data_loader, val_data_loader):
     #     eta_min=1e-6             # 最小學習率下限
     # )
 
-    optimizer = optim.SGD(
-        model.parameters(),
-        lr=0.005,
-        momentum=0.9,
-        weight_decay=0.0005
-    )
+    # optimizer = optim.SGD(
+    #     model.parameters(),
+    #     lr=0.005,
+    #     momentum=0.9,
+    #     weight_decay=0.0005
+    # )
 
-    lr_scheduler = optim.lr_scheduler.StepLR(
-        optimizer, 
-        step_size=5, 
-        gamma=0.1
-    )
+    # lr_scheduler = optim.lr_scheduler.StepLR(
+    #     optimizer, 
+    #     step_size=5, 
+    #     gamma=0.1
+    # )
 
-    # 添加梯度裁剪(在訓練循環中)
-    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    # # 添加梯度裁剪(在訓練循環中)
+    # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+    optim_config = {
+        'lr': 8e-5,
+        'betas': (0.9, 0.999),
+        'weight_decay':  0.2
+    }
+
+    # 初始化優化器
+    optimizer = optim.AdamW(model.parameters(), **optim_config)
+
+    total_epochs = epochs
+    num_steps_per_epoch = len(train_data_loader)  # 假設每個epoch有1000個step
+    total_steps = total_epochs * num_steps_per_epoch
+    warmup_steps = int(0.25 * total_epochs * num_steps_per_epoch)  # 前0.25 epochs預熱
+
+    def lr_lambda(current_step):
+        # 線性預熱階段
+        if current_step < warmup_steps:
+            return current_step / warmup_steps
+        # 半週期餘弦衰減階段
+        progress = (current_step - warmup_steps) / (total_steps - warmup_steps)
+        return 0.5 * (1 + math.cos(math.pi * progress))  # 半週期公式
+
+    lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+    # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)    
     
-    
+    # scaler = GradScaler(enabled=True)
+
     train_loss_list = []
     for epoch in tqdm(range(epochs), desc="Epochs"):
         model.train()
@@ -139,46 +189,29 @@ def train(train_data_loader, val_data_loader):
             images = [img.to(device) for img in images]  # 列表推導式逐個轉移
             targets = [{k: v.to(device) for k,v in t.items()} for t in targets]  # 雙層推導式
             
+            # with autocast(device):
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
+
             train_loss_iter.append(losses.detach().cpu().item())
             
             optimizer.zero_grad()
-            losses.backward()
+            # scaler.scale(losses).backward()
             optimizer.step()
-            lr_scheduler.step()
+            # scaler.step(optimizer)
+
             
+            # scaler.update()
+
+            lr_scheduler.step()
+
             bar.set_postfix(loss=losses.detach().cpu().item() / len(train_data_loader))
             bar.update()
             
         train_loss_list.append(np.mean(train_loss_iter))
         bar.close()
-
-        from eval import test
-        val_dataset = TestDataset(
-            root='dataset/valid',
-        )
-        print(f'Valid dataset length: {len(val_dataset)}')
-
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        val_loader_param = {
-            'batch_size': 8,
-            'num_workers': 12,
-            'persistent_workers': True,
-            'pin_memory': 'cuda' in device,
-            'pin_memory_device': device if 'cuda' in device else '',
-            # 'collate_fn': custom_collate,
-        }
-
-        val_data_loader = torch.utils.data.DataLoader(
-            val_dataset,
-            **loader_param,
-            shuffle=False,
-        )
-        test(model, val_data_loader)
         
-
-        torch.save(model.state_dict(), f"ckpt/model_epoch_{50+epoch}.pth")
+        torch.save(model.state_dict(), f"ckpt/model_epoch_{epoch}.pth")
         
     plot_img(
         train_loss_list,
@@ -189,7 +222,6 @@ def train(train_data_loader, val_data_loader):
     )
 
             
-
 def custom_collate(batch):
     """處理可變長度目標檢測數據"""
     images = []

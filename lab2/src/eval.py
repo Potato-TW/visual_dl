@@ -6,6 +6,7 @@ import torchvision
 from torchvision.models.detection import FasterRCNN
 from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 from torch.utils.data import Dataset
 from dataloader import DigitDataset
@@ -17,6 +18,8 @@ import json
 from tqdm import tqdm
 
 import torchvision.transforms as T
+
+import os
 
 class TestDataset(Dataset):
     def __init__(self, root, annotation_path=None, transforms=None):
@@ -118,6 +121,61 @@ def load_model(ckpt_path, num_classes=11):
     
     return model
 
+def load_model_mobilenet_v3(ckpt_path, num_classes=11):
+    weights = torchvision.models.MobileNet_V3_Large_Weights.DEFAULT
+    backbone = torchvision.models.mobilenet_v3_large(weights=weights).features
+    backbone.out_channels = 960
+
+    # 修改anchor生成器
+    anchor_generator = AnchorGenerator(
+        sizes=((32, 64, 128, 256, 512),),
+        aspect_ratios=((0.5, 1.0, 2.0),)
+    )
+
+    # 構建Faster R-CNN模型
+    model = FasterRCNN(
+        backbone,
+        num_classes=num_classes,
+        rpn_anchor_generator=anchor_generator,
+        box_score_thresh=0.8  # 提高檢測閾值
+    )
+
+    model.load_state_dict(torch.load(ckpt_path, weights_only=True))
+
+    return model
+
+def load_model_resnet50(ckpt_path, num_classes=11):
+    weights = torchvision.models.ResNet50_Weights.DEFAULT
+    backbone = resnet_fpn_backbone(
+        backbone_name='resnet50',
+        weights=weights,
+        trainable_layers=3  # 训练最后3个残差块
+    )
+    
+    # Anchor 配置（需匹配 FPN 输出层数）
+    anchor_sizes = ((32,), (64,), (128,), (256,), (512,))  # 对应 FPN 的5个输出层
+    aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
+    
+    anchor_generator = AnchorGenerator(
+        sizes=anchor_sizes,
+        aspect_ratios=aspect_ratios
+    )
+
+    # 构建模型
+    model = FasterRCNN(
+        backbone,
+        num_classes=num_classes,
+        rpn_anchor_generator=anchor_generator,
+        box_score_thresh=0.8,
+        # 关键参数：FPN 输出的通道数（默认256）
+        box_head_detections_per_img=200  
+    )
+
+    model.load_state_dict(torch.load(ckpt_path, weights_only=True))
+
+    return model
+
+
 def deNormalize_box(image_id, xyxy_box):
     """
     反標準化邊界框坐標
@@ -152,7 +210,7 @@ def deNormalize_box(image_id, xyxy_box):
     return orig_box
     
 
-def convert_to_coco_format(outputs, image_ids, score_threshold=0.9):
+def convert_to_coco_format(outputs, image_ids, score_threshold=0.8):
     """
     参数：
         outputs: 模型输出列表 (每个元素对应一个图像的检测结果)
@@ -199,7 +257,7 @@ def convert_to_coco_format(outputs, image_ids, score_threshold=0.9):
     
     return coco_results
 
-def task2_do(outputs, image_ids, task2, score_threshold=0.9):
+def task2_do(outputs, image_ids, task2, score_threshold=0.8):
     """
     將模型輸出與預設DataFrame結合
     """
@@ -296,11 +354,11 @@ def test(model, test_data_loader):
             tmp = model(images)
             # print(tmp)
             
-            coco = convert_to_coco_format(tmp, images_id['image_id'], score_threshold=0.85)
+            coco = convert_to_coco_format(tmp, images_id['image_id'], score_threshold=0.8)
             
             task1 = task1 + coco
             
-            task2 = task2_do(tmp, images_id['image_id'], task2, score_threshold=0.85)
+            task2 = task2_do(tmp, images_id['image_id'], task2, score_threshold=0.8)
             
             test_bar.update()
     test_bar.close()
@@ -343,8 +401,13 @@ if __name__ == "__main__":
         shuffle=False,
     )
 
-    ckpt_path = 'ckpt/model_epoch_99.pth'
-    model = load_model(ckpt_path, 11).to(device)
+    # ckpt_path = '/home/bhg/visual_dl/lab2/record/mobile_v2_50/ckpt/model_epoch_0.pth'
+    # model = load_model(ckpt_path, 11).to(device)
+    # ckpt_path = '/home/bhg/visual_dl/lab2/ckpt/model_epoch_4.pth'
+    # model = load_model_mobilenet_v3(ckpt_path, 11).to(device)
+    ckpt_path= '/home/bhg/visual_dl/lab2/ckpt/model_epoch_2.pth'
+    model = load_model_resnet50(ckpt_path, 11).to(device)
+
     
     # print(model)
        
