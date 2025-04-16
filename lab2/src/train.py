@@ -24,24 +24,24 @@ import numpy as np
 from torch.amp import autocast, GradScaler
 
 def build_model(num_classes=11):
-    # 加載預訓練backbone
     weights = torchvision.models.MobileNet_V2_Weights.DEFAULT
     backbone = torchvision.models.mobilenet_v2(weights=weights).features
     backbone.out_channels = 1280
 
-    # 修改anchor生成器
     anchor_generator = AnchorGenerator(
         sizes=((32, 64, 128, 256, 512),),
-        aspect_ratios=((0.5, 1.0, 2.0),) * 5
+        aspect_ratios=((0.5, 1.0, 2.0),)
     )
 
-    # 構建Faster R-CNN模型
     model = FasterRCNN(
         backbone,
         num_classes=num_classes,
         rpn_anchor_generator=anchor_generator,
-        box_score_thresh=0.8  # 提高檢測閾值
+        box_score_thresh=0.8
     )
+
+
+    model.load_state_dict(torch.load('/home/bhg/visual_dl/lab2/record/mobile_v2_50/ckpt/model_epoch_0.pth', weights_only=True))
     
     return model
 
@@ -50,10 +50,9 @@ def build_model_resnet50(num_classes=11):
     backbone = resnet_fpn_backbone(
         backbone_name='resnet50',
         weights=weights,
-        trainable_layers=3  # 训练最后3个残差块
+        trainable_layers=3
     )
     
-    # Anchor 配置（需匹配 FPN 输出层数）
     anchor_sizes = ((32,), (64,), (128,), (256,), (512,))  # 对应 FPN 的5个输出层
     aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
     
@@ -62,13 +61,11 @@ def build_model_resnet50(num_classes=11):
         aspect_ratios=aspect_ratios
     )
 
-    # 构建模型
     model = FasterRCNN(
         backbone,
         num_classes=num_classes,
         rpn_anchor_generator=anchor_generator,
         box_score_thresh=0.8,
-        # 关键参数：FPN 输出的通道数（默认256）
         box_head_detections_per_img=200  
     )
     return model
@@ -78,18 +75,16 @@ def build_model_v3(num_classes=11):
     backbone = torchvision.models.mobilenet_v3_large(weights=weights).features
     backbone.out_channels = 960
 
-    # 修改anchor生成器
     anchor_generator = AnchorGenerator(
         sizes=((32, 64, 128, 256, 512),),
         aspect_ratios=((0.5, 1.0, 2.0),) * 5
     )
 
-    # 構建Faster R-CNN模型
     model = FasterRCNN(
         backbone,
         num_classes=num_classes,
         rpn_anchor_generator=anchor_generator,
-        box_score_thresh=0.8  # 提高檢測閾值
+        box_score_thresh=0.8
     )
     
     return model
@@ -106,7 +101,6 @@ def plot_img(data, data_label, title, y_label, save_path, y_lim=None):
     plt.savefig(save_path)
     plt.close()
     
-# 訓練流程
 def train(train_data_loader, val_data_loader):
     import torch
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -116,7 +110,7 @@ def train(train_data_loader, val_data_loader):
     import torch.optim.lr_scheduler
     from torch.optim.lr_scheduler import CosineAnnealingLR
     
-    epochs = 40
+    epochs = 50
     
     # mobile opti scheduler
 
@@ -127,11 +121,10 @@ def train(train_data_loader, val_data_loader):
             eps=1e-08
         )
 
-        # 學習率調度器升級
         lr_scheduler = CosineAnnealingLR(
             optimizer,
-            T_max=epochs*0.6,        # 週期設為總epoch數的60%
-            eta_min=1e-6             # 最小學習率下限
+            T_max=epochs*0.6,     
+            eta_min=1e-6         
         )
 
         return optimizer, lr_scheduler
@@ -141,7 +134,7 @@ def train(train_data_loader, val_data_loader):
         optimizer = torch.optim.RMSprop(
             model.parameters(),
             lr=0.001,
-            alpha=0.9,            # 平滑系数
+            alpha=0.9,      
             momentum=0.9,
             eps=1e-07,
             weight_decay=0.0001
@@ -149,10 +142,10 @@ def train(train_data_loader, val_data_loader):
 
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
-            max_lr=0.01,          # 峰值学习率
+            max_lr=0.01,       
             steps_per_epoch=len(train_data_loader),
             epochs=epochs,
-            pct_start=0.3         # 升温期比例
+            pct_start=0.3
         )
 
         return optimizer, scheduler
@@ -184,14 +177,25 @@ def train(train_data_loader, val_data_loader):
 
         return optimizer, lr_scheduler
 
-    # optimizer, lr_scheduler = first_version_v2(model)
-    optimizer, lr_scheduler = gpt_recommend_v2_speedup(model, train_data_loader)
+
+    def v2_reconstrust(model):
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr=0.005,
+            momentum=0.9,
+            weight_decay=0.0005
+        )
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=3,
+            gamma=0.1
+        )
+        return optimizer, lr_scheduler
+
+    optimizer, lr_scheduler = first_version_v2(model)
+    # optimizer, lr_scheduler = gpt_recommend_v2_speedup(model, train_data_loader)
     # optimizer, lr_scheduler = reference_optim_scheduler(model)
 
-
-
-
-    # 添加梯度裁剪(在訓練循環中)
     # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
     # optim_config = {
@@ -200,7 +204,7 @@ def train(train_data_loader, val_data_loader):
     #     'weight_decay':  0.2
     # }
 
-    # # 初始化優化器
+    # 
     # optimizer = optim.AdamW(model.parameters(), **optim_config)
 
     # total_epochs = epochs
@@ -209,10 +213,10 @@ def train(train_data_loader, val_data_loader):
     # warmup_steps = int(0.25 * total_epochs * num_steps_per_epoch)  # 前0.25 epochs預熱
 
     # def lr_lambda(current_step):
-    #     # 線性預熱階段
+    #     
     #     if current_step < warmup_steps:
     #         return current_step / warmup_steps
-    #     # 半週期餘弦衰減階段
+    #     
     #     progress = (current_step - warmup_steps) / (total_steps - warmup_steps)
     #     return 0.5 * (1 + math.cos(math.pi * progress))  # 半週期公式
 
@@ -225,7 +229,7 @@ def train(train_data_loader, val_data_loader):
         'best_map': 0.0
     }
 
-    scaler = GradScaler(enabled=('cuda' in device))
+    # scaler = GradScaler(enabled=('cuda' in device))
 
     train_loss_list = []
     for epoch in tqdm(range(epochs), desc="Epochs"):
@@ -234,25 +238,25 @@ def train(train_data_loader, val_data_loader):
         train_loss_iter = []
         bar = tqdm(train_data_loader, desc="Training", leave=False)
         for images, targets in train_data_loader:
-            images = [img.to(device) for img in images]  # 列表推導式逐個轉移
-            targets = [{k: v.to(device) for k,v in t.items()} for t in targets]  # 雙層推導式
+            images = [img.to(device) for img in images]  
+            targets = [{k: v.to(device) for k,v in t.items()} for t in targets]  
             
-            with autocast(device):
-                loss_dict = model(images, targets)
-                losses = sum(loss for loss in loss_dict.values())
+            # with autocast(device):
+            #     loss_dict = model(images, targets)
+            #     losses = sum(loss for loss in loss_dict.values())
 
-            scaler.scale(losses).backward()
-            scaler.step(optimizer)
-            scaler.update()
-            lr_scheduler.step()
-
-
-            # loss_dict = model(images, targets)
-            # losses = sum(loss for loss in loss_dict.values())
-            
-            # optimizer.zero_grad()
-            # optimizer.step()
+            # scaler.scale(losses).backward()
+            # scaler.step(optimizer)
+            # scaler.update()
             # lr_scheduler.step()
+
+
+            loss_dict = model(images, targets)
+            losses = sum(loss for loss in loss_dict.values())
+            
+            optimizer.zero_grad()
+            optimizer.step()
+            lr_scheduler.step()
 
             train_loss_iter.append(losses.detach().cpu().item())
 
@@ -264,21 +268,21 @@ def train(train_data_loader, val_data_loader):
         bar.close()
 
 
-        # 记录训练损失
+        
         metrics['train_loss'].append(mean_epoch_train_loss)
         
-        # 验证阶段
+       
         val_metrics = evaluate(model, val_data_loader, device)
         metrics['val_accuracy'].append(val_metrics['accuracy'])
         metrics['val_recall'].append(val_metrics['recall'])
         
-        # 保存最佳模型
+        
         current_map = (val_metrics['accuracy'] + val_metrics['recall']) / 2
         if current_map > metrics['best_map']:
             torch.save(model.state_dict(), f"ckpt/best_model.pth")
             metrics['best_map'] = current_map
         
-        # 打印进度
+        
         print(f"Epoch {epoch+1}/{epochs} | "
               f"Train Loss: {metrics['train_loss'][-1]:.4f} | "
               f"Val Acc: {val_metrics['accuracy']:.2%} | "
@@ -295,7 +299,7 @@ def train(train_data_loader, val_data_loader):
         f'img/train_loss.png'
     )
 
-        # 可视化训练曲线
+    
     plt.figure(figsize=(12, 5))
     plt.subplot(121)
     plt.plot(metrics['train_loss'], label='Training Loss')
@@ -310,7 +314,6 @@ def train(train_data_loader, val_data_loader):
 
             
 def custom_collate(batch):
-    """處理可變長度目標檢測數據"""
     images = []
     targets = []
     
@@ -322,7 +325,6 @@ def custom_collate(batch):
             'image_id': target['image_id']
         })
     
-    # 堆疊圖像張量
     images = torch.stack(images, dim=0)
     return images, targets
 
@@ -353,7 +355,7 @@ if __name__ == "__main__":
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     loader_param = {
-        'batch_size': 12,
+        'batch_size': 6,
         'num_workers': 12,
         'persistent_workers': True,
         'pin_memory': 'cuda' in device,
@@ -366,9 +368,22 @@ if __name__ == "__main__":
         **loader_param,
         shuffle=True,
     )
+
+    val_dataset = DigitDataset(
+        root='dataset/valid',
+        annotation_path='dataset/valid.json',
+        transforms=T.Compose([
+            # T.Resize(size=232, antialias=True),
+            # T.CenterCrop(size=224),
+            T.ToTensor(),
+            T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+    )
+
+    print(f'val dataset: {len(val_dataset)}')
     
     val_data_loader = torch.utils.data.DataLoader(
-        dataset,
+        val_dataset,
         **loader_param,
         shuffle=False,
     )

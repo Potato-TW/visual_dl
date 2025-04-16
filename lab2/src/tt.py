@@ -86,15 +86,3 @@ def task2_do(output, task2, image_id):
         task2.loc[task2['image_id'] == int(image_id.item()), 'pred_label'] = int(labels[i])
     
     return task2
-
-# import torch
-
-# tmp = {'boxes': tensor([[152.7115,  80.3657, 172.8028, 185.9408],
-#         [137.5092,  73.9137, 154.3575, 187.1175]], device='cuda:0'), 'labels': tensor([3, 2], device='cuda:0'), 'scores': tensor([0.9968, 0.9428], device='cuda:0')}
-
-import numpy as np 
-
-a = np.array([])
-a.append(1)
-
-print(a)
