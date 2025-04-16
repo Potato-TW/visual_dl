@@ -406,10 +406,10 @@ if __name__ == "__main__":
         shuffle=False,
     )
 
-    # ckpt_path = '/home/bhg/visual_dl/lab2/record/mobile_v2_50/ckpt/model_epoch_0.pth'
-    # model = load_model(ckpt_path, 11).to(device)
-    ckpt_path = '/home/bhg/visual_dl/lab2/ckpt/model_epoch_2.pth'
-    model = load_model_mobilenet_v3(ckpt_path, 11).to(device)
+    ckpt_path = '/home/bhg/visual_dl/lab2/ckpt/model_epoch_1.pth'
+    model = load_model(ckpt_path, 11).to(device)
+    # ckpt_path = '/home/bhg/visual_dl/lab2/ckpt/model_epoch_2.pth'
+    # model = load_model_mobilenet_v3(ckpt_path, 11).to(device)
     # ckpt_path= '/home/bhg/visual_dl/lab2/record/resnet50_30/model_epoch_15.pth'
     # model = load_model_resnet50(ckpt_path, 11).to(device)
 

@@ -137,7 +137,7 @@ def train(train_data_loader, val_data_loader):
         return optimizer, lr_scheduler
 
 
-    def gpt_recommend_v2_speedup(model):
+    def gpt_recommend_v2_speedup(model, train_data_loader):
         optimizer = torch.optim.RMSprop(
             model.parameters(),
             lr=0.001,
@@ -150,7 +150,7 @@ def train(train_data_loader, val_data_loader):
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             max_lr=0.01,          # 峰值学习率
-            steps_per_epoch=len(train_loader),
+            steps_per_epoch=len(train_data_loader),
             epochs=epochs,
             pct_start=0.3         # 升温期比例
         )
@@ -185,7 +185,7 @@ def train(train_data_loader, val_data_loader):
         return optimizer, lr_scheduler
 
     # optimizer, lr_scheduler = first_version_v2(model)
-    optimizer, lr_scheduler = gpt_recommend_v2_speedup(model)
+    optimizer, lr_scheduler = gpt_recommend_v2_speedup(model, train_data_loader)
     # optimizer, lr_scheduler = reference_optim_scheduler(model)
 
 
@@ -353,7 +353,7 @@ if __name__ == "__main__":
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     loader_param = {
-        'batch_size': 8,
+        'batch_size': 12,
         'num_workers': 12,
         'persistent_workers': True,
         'pin_memory': 'cuda' in device,
