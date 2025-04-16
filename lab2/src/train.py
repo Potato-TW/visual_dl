@@ -41,7 +41,7 @@ def build_model(num_classes=11):
     )
 
 
-    model.load_state_dict(torch.load('/home/bhg/visual_dl/lab2/record/mobile_v2_50/ckpt/model_epoch_0.pth', weights_only=True))
+    # model.load_state_dict(torch.load('/home/bhg/visual_dl/lab2/record/mobile_v2_50/ckpt/model_epoch_0.pth', weights_only=True))
     
     return model
 
@@ -104,7 +104,8 @@ def plot_img(data, data_label, title, y_label, save_path, y_lim=None):
 def train(train_data_loader, val_data_loader):
     import torch
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = build_model().to(device)
+    # model = build_model().to(device)
+    model = build_model_v3(11).to(device)
     
     import torch.optim as optim
     import torch.optim.lr_scheduler
@@ -118,6 +119,7 @@ def train(train_data_loader, val_data_loader):
         optimizer = optim.AdamW(
             model.parameters(),
             lr=1e-3,
+            weight_decay=0.0001,
             eps=1e-08
         )
 
@@ -196,7 +198,7 @@ def train(train_data_loader, val_data_loader):
     # optimizer, lr_scheduler = gpt_recommend_v2_speedup(model, train_data_loader)
     # optimizer, lr_scheduler = reference_optim_scheduler(model)
 
-    # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
     # optim_config = {
     #     'lr': 8e-5,
@@ -255,12 +257,13 @@ def train(train_data_loader, val_data_loader):
             losses = sum(loss for loss in loss_dict.values())
             
             optimizer.zero_grad()
+            losses.backward()
             optimizer.step()
             lr_scheduler.step()
 
             train_loss_iter.append(losses.detach().cpu().item())
 
-            bar.set_postfix(loss=losses.detach().cpu().item() / len(train_data_loader))
+            bar.set_postfix(loss=losses.detach().cpu().item())
             bar.update()
             
         mean_epoch_train_loss = np.mean(train_loss_iter)
@@ -355,7 +358,7 @@ if __name__ == "__main__":
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     loader_param = {
-        'batch_size': 6,
+        'batch_size': 8,
         'num_workers': 12,
         'persistent_workers': True,
         'pin_memory': 'cuda' in device,

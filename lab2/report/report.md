@@ -180,8 +180,9 @@ for epoch in tqdm(range(epochs), desc="Epochs"):
 
         loss_dict = model(images, targets)
         losses = sum(loss for loss in loss_dict.values())
-        
+    
         optimizer.zero_grad()
+        losses.backward()
         optimizer.step()
         lr_scheduler.step()
 
