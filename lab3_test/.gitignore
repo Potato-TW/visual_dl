@@ -3,3 +3,5 @@ dataset/
 results/
 *.zip
 *.pth
+submission/
+tensorboard/

@@ -27,11 +27,11 @@ INPUT:
     TYPE: relative_range
   FORMAT: BGR
   MASK_FORMAT: bitmask
-  MAX_SIZE_TEST: 1333
-  MAX_SIZE_TRAIN: 1333
+  MAX_SIZE_TEST: 1024
+  MAX_SIZE_TRAIN: 1024
   MIN_SIZE_TEST: 0
   MIN_SIZE_TRAIN:
-  - 512
+  - 224
   MIN_SIZE_TRAIN_SAMPLING: choice
   RANDOM_FLIP: horizontal
 MODEL:
@@ -81,9 +81,9 @@ MODEL:
   - 116.28
   - 123.675
   PIXEL_STD:
-  - 1.0
-  - 1.0
-  - 1.0
+  - 57.375
+  - 57.12
+  - 58.395
   PROPOSAL_GENERATOR:
     MIN_SIZE: 0
     NAME: RPN
@@ -95,9 +95,9 @@ MODEL:
     - false
     - false
     - false
-    DEPTH: 50
+    DEPTH: 101
     NORM: FrozenBN
-    NUM_GROUPS: 1
+    NUM_GROUPS: 32
     OUT_FEATURES:
     - res2
     - res3
@@ -106,8 +106,8 @@ MODEL:
     RES2_OUT_CHANNELS: 256
     RES5_DILATION: 1
     STEM_OUT_CHANNELS: 64
-    STRIDE_IN_1X1: true
-    WIDTH_PER_GROUP: 64
+    STRIDE_IN_1X1: false
+    WIDTH_PER_GROUP: 8
   RETINANET:
     BBOX_REG_LOSS_TYPE: smooth_l1
     BBOX_REG_WEIGHTS: &id002
@@ -161,7 +161,7 @@ MODEL:
     BBOX_REG_LOSS_TYPE: smooth_l1
     BBOX_REG_LOSS_WEIGHT: 1.0
     BBOX_REG_WEIGHTS: *id001
-    CLS_AGNOSTIC_BBOX_REG: true
+    CLS_AGNOSTIC_BBOX_REG: false
     CONV_DIM: 256
     FC_DIM: 1024
     FED_LOSS_FREQ_WEIGHT_POWER: 0.5
@@ -189,7 +189,7 @@ MODEL:
     - 1
     IOU_THRESHOLDS:
     - 0.5
-    NAME: CascadeROIHeads
+    NAME: StandardROIHeads
     NMS_THRESH_TEST: 0.5
     NUM_CLASSES: 4
     POSITIVE_FRACTION: 0.25
@@ -248,7 +248,7 @@ MODEL:
     NMS_THRESH: 0.7
     POSITIVE_FRACTION: 0.5
     POST_NMS_TOPK_TEST: 1000
-    POST_NMS_TOPK_TRAIN: 2000
+    POST_NMS_TOPK_TRAIN: 1000
     PRE_NMS_TOPK_TEST: 1000
     PRE_NMS_TOPK_TRAIN: 2000
     SMOOTH_L1_BETA: 0.0
@@ -265,13 +265,13 @@ MODEL:
     NAME: SemSegFPNHead
     NORM: GN
     NUM_CLASSES: 54
-  WEIGHTS: https://dl.fbaipublicfiles.com/detectron2/Misc/cascade_mask_rcnn_R_50_FPN_3x/144998488/model_final_480dd8.pkl
+  WEIGHTS: https://dl.fbaipublicfiles.com/detectron2/COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x/139653917/model_final_2d9806.pkl
 OUTPUT_DIR: /home/bhg/visual_dl/lab3_test/log
 SEED: -1
 SOLVER:
   AMP:
     ENABLED: false
-  BASE_LR: 0.0001
+  BASE_LR: 0.0004
   BASE_LR_END: 0.0
   BIAS_LR_FACTOR: 1.0
   CHECKPOINT_PERIOD: 1000
@@ -283,15 +283,14 @@ SOLVER:
   GAMMA: 0.1
   IMS_PER_BATCH: 1
   LR_SCHEDULER_NAME: WarmupMultiStepLR
-  MAX_ITER: 20000
+  MAX_ITER: 15000
   MOMENTUM: 0.9
   NESTEROV: false
   NUM_DECAYS: 3
   REFERENCE_WORLD_SIZE: 0
   RESCALE_INTERVAL: false
   STEPS:
-  - 210000
-  - 250000
+  - 5000
   WARMUP_FACTOR: 0.001
   WARMUP_ITERS: 1000
   WARMUP_METHOD: linear
