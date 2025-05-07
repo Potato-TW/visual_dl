@@ -2,3 +2,4 @@ output/
 dataset/
 results/
 *.zip
+*.pth
