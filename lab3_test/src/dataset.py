@@ -69,9 +69,8 @@ def _load_sample(dir_path: Path, img_id: int) -> Dict:
 
 
 def _build_dicts(suffix: str) -> List[Dict]:
-    dirs = sorted((DATA_ROOT / "train").iterdir())
-    rnd = random.Random(RANDOM_SEED)
-    rnd.shuffle(dirs)
+    dirs = list((DATA_ROOT / "train").iterdir())
+    random.Random(RANDOM_SEED).shuffle(dirs)
     if suffix == "trainval":
         chosen = dirs
     else:
@@ -80,7 +79,7 @@ def _build_dicts(suffix: str) -> List[Dict]:
     return [_load_sample(d, i) for i, d in enumerate(chosen)]
 
 
-def _register(name: str, suffix: str):
+def register_dataset(name: str, suffix: str):
     from detectron2.data import DatasetCatalog, MetadataCatalog
 
     if name in DatasetCatalog.list():
@@ -93,6 +92,6 @@ def _register(name: str, suffix: str):
 
 
 def register_cell_dataset():
-    _register("dataset_train", "train")
-    _register("dataset_val", "val")
-    _register("dataset_trainval", "trainval")
+    register_dataset("dataset_train", "train")
+    register_dataset("dataset_val", "val")
+    # register_dataset("dataset_trainval", "trainval")
