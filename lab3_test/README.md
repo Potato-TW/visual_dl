@@ -35,4 +35,4 @@ def setup():
 
 |Total training loss|Segmentation AP|
 |-|-|
-|![](../img/loss_car50_1024.png)|![](../img/segm_car50_1024.png)|
+|![](./img/loss_car50_1024.png)|![](./img/segm_car50_1024.png)|
