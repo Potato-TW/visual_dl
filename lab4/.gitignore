@@ -1,2 +1,6 @@
 download.sh
 hw4_realse_dataset*
+
+wandb/
+ckpts/
+img/
