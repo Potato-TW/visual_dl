@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 
 # Set your image folder path
-folder_path = '/path/to/your/folder'
+folder_path = './inf_img'
 output_npz = 'pred.npz'
 
 # Initialize dictionary to hold image arrays
@@ -13,6 +13,8 @@ images_dict = {}
 for filename in os.listdir(folder_path):
     if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
         file_path = os.path.join(folder_path, filename)
+
+        print(file_path)
 
         # Load image and convert to RGB
         image = Image.open(file_path).convert('RGB')
@@ -26,5 +28,11 @@ for filename in os.listdir(folder_path):
 
 # Save to .npz file
 np.savez(output_npz, **images_dict)
+
+import zipfile
+from zipfile import ZipFile
+
+with open('sub.zip', 'w') as zf:
+    zf.write('./pred.npz')
 
 print(f"Saved {len(images_dict)} images to {output_npz}")

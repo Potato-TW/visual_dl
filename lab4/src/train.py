@@ -58,7 +58,7 @@ class Training():
                                             shuffle_list=shuffle_list)
         
         self.val_loader = DataLoader(self.val_set, 
-                                       batch_size=self.batch_size, 
+                                       batch_size=2,#self.batch_size, 
                                        shuffle=False, 
                                        num_workers=self.num_workers)
         
@@ -75,8 +75,11 @@ class Training():
 
         
         self.model = PromptIR(decoder=True).to(self.device)
+        # ckpt=torch.load('ckpts_1/ckpt_-1.pth')
+        # self.model.load_state_dict = ckpt['model']
         
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr)
+        # self.optimizer.load_state_dict = ckpt['optimizer']
         self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer,
                                                               T_max=len(self.train_loader) * self.epochs,
                                                               last_epoch=-1,
@@ -177,9 +180,9 @@ if __name__ == '__main__':
     parser.add_argument("--wandb-run-name", type=str, default="lab4")
     parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--num-epochs', type=int, default=400)
-    parser.add_argument('--batch-size', type=int, default=4)
+    parser.add_argument('--batch-size', type=int, default=10)
     parser.add_argument('--num-workers', type=int, default=8)
-    parser.add_argument('--output-img-size', type=int, default=128)
+    parser.add_argument('--output-img-size', type=int, default=64)
     parser.add_argument('--dataset_path', '-ds', type=str, default='./hw4_realse_dataset')
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--save-ckpt-dir', type=str, default='./ckpts')

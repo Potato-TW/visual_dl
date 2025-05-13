@@ -4,3 +4,6 @@ hw4_realse_dataset*
 wandb/
 ckpts/
 img/
+
+*.npz
+sub.zip
