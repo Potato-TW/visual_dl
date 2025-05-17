@@ -5,7 +5,6 @@ wandb/
 ckpts/
 ckpts*/
 inf_img/
-img/
 
 *.npz
 sub.zip
