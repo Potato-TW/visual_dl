@@ -56,10 +56,10 @@ class HW4_REALSE_DATASET(Dataset):
         if self.mode in ['train']:
             tfrm = T.Compose([
                 T.RandomCrop(self.output_img_size),
-                T.RandomHorizontalFlip(p=0.5),
-                T.RandomVerticalFlip(p=0.5),
-                T.RandomRotation(30),
-                T.ColorJitter(brightness=0.1, contrast=0.1),
+                # T.RandomHorizontalFlip(p=0.5),
+                # T.RandomVerticalFlip(p=0.5),
+                # T.RandomRotation(30),
+                # T.ColorJitter(brightness=0.2, contrast=0.5, saturation=0.3, hue=0.1),
                 T.ToTensor(),
                 # T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])

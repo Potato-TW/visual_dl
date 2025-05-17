@@ -82,7 +82,7 @@ class Tester():
         self.model.eval()
 
         # eval_loss = []
-        progress_bar = tqdm(self.test_loader, desc='Eval', ncols=100)
+        progress_bar = tqdm(self.test_loader, desc='Test', ncols=100)
         for img_name, img in progress_bar:
             img = img.to(self.device)
 

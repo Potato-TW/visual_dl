@@ -8,7 +8,6 @@ import random
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-# from torch.utils.tensorboard import SummaryWriter
 
 # from torchvision.transforms import v2 as T
 from torchvision.utils import make_grid, save_image
@@ -16,8 +15,6 @@ from torchvision.utils import make_grid, save_image
 from diffusers import DDPMScheduler
 
 from dataset import HW4_REALSE_DATASET
-# from ddpm import CondDDPM
-# from evaluator import evaluation_model
 from model import PromptIR
 
 import wandb
@@ -97,10 +94,8 @@ class Training():
         true_count = int(total * self.train_ratio)  # 2560
         false_count = total - true_count  # 640
 
-        # 創建初始列表
         bool_list = [True] * true_count + [False] * false_count
 
-        # 隨機打亂順序
         random.shuffle(bool_list)
 
         return bool_list
@@ -178,10 +173,10 @@ class Training():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("--wandb-run-name", type=str, default="lab4")
-    parser.add_argument('--lr', type=float, default=2e-4)
+    parser.add_argument('--lr', type=float, default=4e-4)
     parser.add_argument('--num-epochs', type=int, default=400)
     parser.add_argument('--batch-size', type=int, default=10)
-    parser.add_argument('--num-workers', type=int, default=8)
+    parser.add_argument('--num-workers', type=int, default=12)
     parser.add_argument('--output-img-size', type=int, default=64)
     parser.add_argument('--dataset_path', '-ds', type=str, default='./hw4_realse_dataset')
     parser.add_argument('--device', type=str, default='cuda')

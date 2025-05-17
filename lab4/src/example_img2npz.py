@@ -29,10 +29,10 @@ for filename in os.listdir(folder_path):
 # Save to .npz file
 np.savez(output_npz, **images_dict)
 
-import zipfile
-from zipfile import ZipFile
+# import zipfile
+# from zipfile import ZipFile
 
-with open('sub.zip', 'w') as zf:
-    zf.write('./pred.npz')
+# with open('sub.zip', 'w') as zf:
+#     zf.write('./pred.npz')
 
 print(f"Saved {len(images_dict)} images to {output_npz}")
