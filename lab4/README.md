@@ -12,7 +12,13 @@ After 10 hours (400 epochs) training on 5070ti, we can get 30.23 PSNR on testing
 ## How to install
 Run locally<br>
 1. Import env.yml in conda first.
+```bash
+conda create -p env.yml
+```
 1. Activate conda virtual environment.
+```bash
+conda activate lab6
+```
 
 Start training epochs.<br>
 ```bash
