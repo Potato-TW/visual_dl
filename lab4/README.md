@@ -13,7 +13,7 @@ After 10 hours (400 epochs) training on 5070ti, we can get 30.23 PSNR on testing
 Run locally<br>
 1. Import env.yml in conda first.
 ```bash
-conda create -p env.yml
+conda env create -f env.yml
 ```
 1. Activate conda virtual environment.
 ```bash
