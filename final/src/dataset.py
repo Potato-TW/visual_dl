@@ -117,10 +117,17 @@ if __name__ == '__main__':
     os.makedirs('dataset/images/train', exist_ok=True)
     os.makedirs('dataset/images/val', exist_ok=True)
     os.makedirs('dataset/labels/train', exist_ok=True)
+    os.makedirs('dataset/labels/trainval', exist_ok=True)
     os.makedirs('dataset/labels/val', exist_ok=True)
 
     convert_csv_to_yolo('dataset/train.csv',
-                        images_dir='dataset/images/trainval',
+                        images_dir='dataset/train',
                         labels_dir='dataset/labels/trainval')
 
+    import shutil
+    shutil.move('dataset/train', 'dataset/images/trainval')
+    # shutil.move('dataset/train', 'dataset/images/trainval')
+
     split_dataset(args)
+
+    shutil.move('dataset/test', 'dataset/images/test')
