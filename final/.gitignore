@@ -3,3 +3,4 @@ wandb/
 yolo_train_results/
 *.csv
 *.pt
+download.sh

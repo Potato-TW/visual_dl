@@ -4,6 +4,46 @@ import random
 import shutil
 from pathlib import Path
 from tqdm import tqdm
+import pandas as pd
+
+
+def convert_csv_to_yolo(csv_path, images_dir, labels_dir):
+    # # 創建標籤目錄
+    # os.makedirs(labels_dir, exist_ok=True)
+    
+    # 讀取 CSV 文件
+    df = pd.read_csv(csv_path)
+    
+    # 處理每張圖片
+    for (image_id, group) in df.groupby('image_id'):
+        # 圖片路徑
+        img_path = os.path.join(images_dir, f"{image_id}.jpg")  # 假設圖片格式為 jpg
+        
+        # 跳過不存在的圖片
+        if not os.path.exists(img_path):
+            continue
+            
+        # 創建標籤文件
+        txt_path = os.path.join(labels_dir, f"{image_id}.txt")
+        
+        with open(txt_path, 'w') as f:
+            for _, row in group.iterrows():
+                # 解析原始坐標 (假設 CSV 中的 bbox 格式為 [x_min, y_min, width, height])
+                x_min, y_min, width, height = eval(row['bbox'])
+                
+                # 計算歸一化坐標
+                img_width = row['width']
+                img_height = row['height']
+                
+                x_center = (x_min + width / 2) / img_width
+                y_center = (y_min + height / 2) / img_height
+                norm_width = width / img_width
+                norm_height = height / img_height
+                
+                # 寫入標籤文件 (假設只有一個類別，class_id=0)
+                f.write(f"0 {x_center} {y_center} {norm_width} {norm_height}\n")
+
+
 
 def split_dataset(args):
     # 初始化路徑
@@ -73,5 +113,14 @@ if __name__ == '__main__':
                         choices=['copy', 'move'],
                         help='複製或移動原始文件')
     args = parser.parse_args()
+
+    os.makedirs('dataset/images/train', exist_ok=True)
+    os.makedirs('dataset/images/val', exist_ok=True)
+    os.makedirs('dataset/labels/train', exist_ok=True)
+    os.makedirs('dataset/labels/val', exist_ok=True)
+
+    convert_csv_to_yolo('dataset/train.csv',
+                        images_dir='dataset/images/trainval',
+                        labels_dir='dataset/labels/trainval')
 
     split_dataset(args)
