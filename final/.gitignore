@@ -1,0 +1,5 @@
+dataset/
+wandb/
+yolo_train_results/
+*.csv
+*.pt
