@@ -6,13 +6,13 @@ import shutil
 
 settings.update({"wandb": True})
 
-dataset_dir = '/home/bhg/visual_dl/final/dataset'
+dataset_dir = './dataset'
 # 創建 YOLO 數據配置文件
 data_yaml = os.path.join(dataset_dir, 'data.yaml')
 with open(data_yaml, 'w') as f:
     f.write(f'''\
-train: {'/home/bhg/visual_dl/final/dataset/images/train'}
-val: {'/home/bhg/visual_dl/final/dataset/images/val'}  # 需要自行創建驗證集
+train: {'./dataset/images/train'}
+val: {'./dataset/images/val'}  # 需要自行創建驗證集
 
 nc: 1  # 類別數量
 names: ['object']  # 類別名稱
