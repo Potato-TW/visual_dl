@@ -5,3 +5,5 @@ yolo_train_results/
 *.pt
 download.sh
 *.zip
+runs/
+whl/
