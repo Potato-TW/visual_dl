@@ -7,3 +7,4 @@ download.sh
 *.zip
 runs/
 whl/
+datasets/
