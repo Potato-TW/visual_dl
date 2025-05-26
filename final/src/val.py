@@ -110,10 +110,10 @@ def convert_yolo_to_submission(predictions, image_id, original_size):
         x_center, y_center, width, height = pred.xywhn[0][:4].tolist()
         
         # 转换为原始图像像素坐标（左上角格式）
-        x = max(0, int((x_center - width/2) * original_width))
-        y = max(0, int((y_center - height/2) * original_height))
-        w = int(width * original_width)
-        h = int(height * original_height)
+        x = max(0, (x_center - width/2) * original_width)
+        y = max(0, (y_center - height/2) * original_height)
+        w = width * original_width
+        h = height * original_height
         
         # 格式化为整数坐标
         boxes.append(f"{conf:.1f} {x} {y} {w} {h}")
@@ -121,7 +121,7 @@ def convert_yolo_to_submission(predictions, image_id, original_size):
     return f"{image_id},{' '.join(boxes)}"
 
 # model = YOLO("yolo12n.pt")
-model_path = "yolo_train_results/exp1n4/weights/best.pt"  # 模型路径
+model_path = "yolo_train_results/exp1n6_bigdata/weights/best.pt"  # 模型路径
 confidence_threshold = 0.3  # 置信度阈值
 
 def predict_test_dataset(model_path, confidence_threshold=0.3):
@@ -151,9 +151,11 @@ def predict_test_dataset(model_path, confidence_threshold=0.3):
             verbose=False,
             save=True,
             name=f'{image_id}_pred',
+            nms=True,
+            agnostic_nms=True,
         )
 
-        print(results[0].boxes.xywhn)
+        print(results[0])
         
         # if len(results[0].boxes) > 0:
         #     vis_img = draw_bbox(orig_img.copy(), results[0].boxes, original_size)
