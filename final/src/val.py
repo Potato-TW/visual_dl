@@ -121,7 +121,7 @@ def convert_yolo_to_submission(predictions, image_id, original_size):
     return f"{image_id},{' '.join(boxes)}"
 
 # model = YOLO("yolo12n.pt")
-model_path = "yolo_train_results/exp1n6_bigdata/weights/best.pt"  # 模型路径
+model_path = "exp1x_100_last_0929.pt"  # 模型路径
 confidence_threshold = 0.3  # 置信度阈值
 
 def predict_test_dataset(model_path, confidence_threshold=0.3):
@@ -152,10 +152,10 @@ def predict_test_dataset(model_path, confidence_threshold=0.3):
             save=True,
             name=f'{image_id}_pred',
             nms=True,
-            agnostic_nms=True,
+            # agnostic_nms=True,
         )
 
-        print(results[0])
+        print(results[0].boxes)
         
         # if len(results[0].boxes) > 0:
         #     vis_img = draw_bbox(orig_img.copy(), results[0].boxes, original_size)
