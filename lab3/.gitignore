@@ -3,3 +3,6 @@ submission_example.zip
 sample-image/
 ckpt/
 results/
+wandb/
+*.json
+
