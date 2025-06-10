@@ -236,6 +236,7 @@ class Tester():
             progress_bar.update()
 ```
 #### Hyperparameter
+
 |HP|Value|
 |-|-|
 |lr|0.0004|
@@ -249,6 +250,13 @@ We can see model converges starting from about $300^{th}$ epoch.<br>
 |Training loss|Evaluation loss|
 |-|-|
 |![](../img/besttrainloss.png)|![](../img/bestevalloss.png)|
+
+Compare test images.<br>
+
+|Degraded image|Clean image|
+|-|-|
+|![](../img/rain_de.png)|![](../img/rain_cl.png)|
+|![](../img/snow_de.png)|![](../img/snow_cl.png)|
 
 ### References
 
@@ -280,3 +288,38 @@ Leave all the input images the same is the best methods.<br>
 |Training loss|Evaluation loss|
 |-|-|
 |![](../img/best_worsttrainloss.png)|![](../img/best_worstevalloss.png)|
+
+#### Different prompt size
+
+We decrease the prompt size since we have only 2 kinds of dataset.<br>
+Thus, we thought lesser prompt size can make model focus on these 2 images.<br
+>
+```python
+class PromptIR(nn.Module):
+    def __init__(self, 
+        inp_channels=3, 
+        out_channels=3, 
+        dim = 48,
+        num_blocks = [4,6,6,8], 
+        num_refinement_blocks = 4,
+        heads = [1,2,4,8],
+        ffn_expansion_factor = 2.66,
+        bias = False,
+        LayerNorm_type = 'WithBias',   ## Other option 'BiasFree'
+        decoder = False,
+    ):
+        ...
+        
+        if self.decoder:
+            self.prompt1 = PromptGenBlock(prompt_dim=64,prompt_len=5,prompt_size = 8,lin_dim = 96)
+            self.prompt2 = PromptGenBlock(prompt_dim=128,prompt_len=5,prompt_size = 4,lin_dim = 192)
+            self.prompt3 = PromptGenBlock(prompt_dim=320,prompt_len=5,prompt_size = 2,lin_dim = 384)
+        
+        ...
+```
+
+|Training loss|Eval loss|
+|-|-|
+|![](../img/promt_train_loss.png)|![](../img/promt_eval_loss.png)|
+
+As the result, there's no any difference with the original, that is prompt size doesn't affect by dataset kinds.<br>
